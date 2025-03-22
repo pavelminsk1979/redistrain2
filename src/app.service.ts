@@ -1,20 +1,25 @@
-import { Inject, Injectable } from '@nestjs/common';
-import { CACHE_MANAGER } from '@nestjs/cache-manager';
-import { Cache } from 'cache-manager';
+import { Injectable } from '@nestjs/common';
+import { RedisService } from '@liaoliaots/nestjs-redis';
 
 @Injectable()
 export class AppService {
-  constructor(@Inject(CACHE_MANAGER) private cacheManager: Cache) {}
+  constructor(private readonly redisService: RedisService) {}
 
   async getHello() {
-    const key1 = 'key111';
+    const key = 'key1111'; // Ключ для кэширования в Redis
     console.log('Checking Redis connection...');
-    const value = await this.cacheManager.get(key1);
+
+    // Получаем экземпляр клиента Redis
+    const client = this.redisService.getOrThrow();
+
+    // Проверяем наличие значения в кэше Redis
+    const value = await client.get(key);
     console.log('value', value);
 
-    if (value) return value;
-    const newValue = 'newHello World!';
-    await this.cacheManager.set(key1, newValue);
-    return 'Hello World!';
+    if (value) return value; // Если значение найдено, возвращаем его
+
+    const newValue = 'newHello World!'; // Создаем новое значение
+    await client.set(key, newValue, 'EX', 50); // Сохраняем в Redis с истечением 10 секунд
+    return 'Hello World!'; // Возвращаем новое значение
   }
 }
